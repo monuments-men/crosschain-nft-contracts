@@ -13,7 +13,7 @@ contract MultichainTicket is ERC721Enumerable, Ownable {
     }
 
     function mint() external {
-        _mint(msg.sender, totalSupply() + 1);
+        _mint(_msgSender(), totalSupply() + 1);
     }
 
     function _baseURI() internal view virtual override returns (string memory) {

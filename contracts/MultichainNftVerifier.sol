@@ -12,6 +12,7 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
     using ByteHasher for bytes;
 
     uint64 public constant TRANSFER_REQUEST_ID = 1;
+    uint256 public constant MAX_REGISTERED = 500;
 
     mapping(address => bool) public registeredAddress;
     mapping(uint256 => bool) public registeredLens;
@@ -19,6 +20,10 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
 
     mapping(uint256 => address) public idToAddress;
     mapping(address => uint256) public addressToId;
+
+    mapping(uint256 => bytes) public registeredToData;
+
+    uint256 public totalRegistered;
 
     IWorldID internal immutable worldId;
     ILensHub public immutable lensHub;
@@ -45,25 +50,37 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
         uri = _uri;
     }
 
-    function registerWithLens(uint256 _lensId, uint16 _chainId) external {
+    function registerWithLens(
+        uint256 _lensId,
+        uint16 _chainId,
+        bytes calldata _data
+    ) external {
         require(lensHub.ownerOf(_lensId) == _msgSender(), "not owner");
         require(!registeredAddress[_msgSender()], "already registered");
         require(!registeredLens[_lensId], "already lens registered");
+        require(totalRegistered < MAX_REGISTERED, "max registered");
+        require(bridge.multiPassCheck(_msgSender(), _chainId));
         registeredAddress[_msgSender()] = true;
         registeredLens[_lensId] = true;
-        // todo call bridge
+        totalRegistered++;
+        registeredToData[totalRegistered] = _data;
     }
 
     function registerWithPolygonId(
         uint64 requestId,
         uint256[] memory inputs,
         ICircuitValidator validator,
-        uint16 _chainId
+        uint16 _chainId,
+        bytes calldata _data
     ) external {
         require(!registeredAddress[_msgSender()], "already registered");
+        require(totalRegistered < MAX_REGISTERED, "max registered");
+        require(bridge.multiPassCheck(_msgSender(), _chainId));
         registeredAddress[_msgSender()] = true;
         _beforeProofSubmit(requestId, inputs, validator);
         _afterProofSubmit(requestId, inputs, validator);
+        totalRegistered++;
+        registeredToData[totalRegistered] = _data;
     }
 
     function registerWithWorldcoin(
@@ -71,10 +88,13 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
         uint256 root,
         uint256 nullifierHash,
         uint256[8] calldata proof,
-        uint16 _chainId
+        uint16 _chainId,
+        bytes calldata _data
     ) external {
         require(!registeredAddress[_msgSender()], "already registered");
         require(!registeredWorldcoin[nullifierHash], "already registered");
+        require(totalRegistered < MAX_REGISTERED, "max registered");
+        require(bridge.multiPassCheck(_msgSender(), _chainId));
         worldId.verifyProof(
             root,
             1,
@@ -85,13 +105,14 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
         );
         registeredAddress[_msgSender()] = true;
         registeredWorldcoin[nullifierHash] = true;
-        // todo call bridge
+        totalRegistered++;
+        registeredToData[totalRegistered] = _data;
     }
 
     function registerWithoutId(uint16 _chainId) external {
         require(!registeredAddress[_msgSender()], "already registered");
+        require(bridge.multiPassCheck(_msgSender(), _chainId));
         registeredAddress[_msgSender()] = true;
-        // todo call bridge
     }
 
     function finalizeRegister() external {}
@@ -122,11 +143,10 @@ contract MultichainNftVerifier is ERC721, ZKPVerifier {
         );
 
         uint256 id = inputs[validator.getChallengeInputIndex()];
-        // execute the airdrop
+
         if (idToAddress[id] == address(0)) {
             addressToId[_msgSender()] = id;
             idToAddress[id] = _msgSender();
-            // call bridge
         }
     }
 
