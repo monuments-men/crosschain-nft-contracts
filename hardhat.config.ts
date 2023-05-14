@@ -10,6 +10,10 @@ const config: HardhatUserConfig = {
       url: process.env.MUMBAI || "",
       accounts: process.env.PK !== undefined ? [process.env.PK] : [],
     },
+    polygon: {
+      url: process.env.POLYGON || "",
+      accounts: process.env.PK !== undefined ? [process.env.PK] : [],
+    },
   },
 };
 

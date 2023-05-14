@@ -1,43 +1,25 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  // const MultichainTicket = await ethers.getContractFactory("MultichainTicket");
-  // const multichainTicket = await MultichainTicket.deploy(""); // add uri
+  const MultichainTicket = await ethers.getContractFactory("MultichainTicket");
+  const multichainTicket = await MultichainTicket.deploy(""); // add uri
 
-  // await multichainTicket.deployed();
+  await multichainTicket.deployed();
 
-  // console.log("multichainTicket deployed to:", multichainTicket.address);
+  console.log("multichainTicket deployed to:", multichainTicket.address);
 
-  const PoseidonUnit6L = await ethers.getContractFactory("PoseidonUnit6L");
-  const poseidonUnit6L = await PoseidonUnit6L.deploy();
-  await poseidonUnit6L.deployed();
-
-  const SpongePoseidon = await ethers.getContractFactory("SpongePoseidon", {
-    libraries: {
-      "contracts/lib/Poseidon.sol:PoseidonUnit6L": poseidonUnit6L.address,
-    },
-  });
-  const spongePoseidon = await SpongePoseidon.deploy();
-  await spongePoseidon.deployed();
-
-  let MultichainNftVerifier = await ethers.getContractFactory(
-    "MultichainNftVerifier",
-    {
-      libraries: {
-        "contracts/lib/Poseidon.sol:PoseidonUnit6L": poseidonUnit6L.address,
-        "contracts/lib/Poseidon.sol:SpongePoseidon": spongePoseidon.address,
-      },
-    }
+  const MultichainNftVerifier = await ethers.getContractFactory(
+    "MultichainNftVerifier"
   );
 
   const multichainNftVerifier = await MultichainNftVerifier.deploy(
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    ethers.constants.AddressZero,
-    "",
-    "",
-    ""
-  ); // add uri
+    "0xD81dE4BCEf43840a2883e5730d014630eA6b7c4A", // worldcoin polygon
+    "0xDb46d1Dc155634FbC732f92E853b10B288AD5a1d", // lenshub polygon
+    "0x1e049eE762A31c27588d522c596045616C8d5Cf4", // bridge address polygon
+    "app_4dbefa59fdf71b9b734938badbf9c23b", // appId worldcoin
+    "register", // actionId worldcoin
+    "" // add uri
+  );
 
   await multichainNftVerifier.deployed();
 

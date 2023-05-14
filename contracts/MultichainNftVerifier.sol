@@ -12,13 +12,13 @@ contract MultichainNftVerifier is ERC721, Ownable {
     using ByteHasher for bytes;
 
     uint64 public constant TRANSFER_REQUEST_ID = 1;
-    uint256 public constant MAX_REGISTERED = 500;
+    uint256 public constant MAX_REGISTERED = 100;
 
     mapping(address => bool) public registeredAddress;
     mapping(uint256 => bool) public registeredLens;
     mapping(uint256 => bool) public registeredWorldcoin;
 
-    mapping(uint256 => bytes) public registeredToData;
+    mapping(uint256 => string) public registeredToString;
 
     uint256 public totalRegistered;
 
@@ -37,7 +37,7 @@ contract MultichainNftVerifier is ERC721, Ownable {
         string memory _actionId,
         string memory _uri
     ) ERC721("PlaceHolder", "PLC") {
-        _mint(_msgSender(), 1);
+        _mint(msg.sender, 1);
         worldId = _worldId;
         lensHub = _lensHub;
         bridge = _bridge;
@@ -50,17 +50,17 @@ contract MultichainNftVerifier is ERC721, Ownable {
     function registerWithLens(
         uint256 _lensId,
         uint16 _chainId,
-        bytes calldata _data
+        string calldata _data
     ) external {
-        require(lensHub.ownerOf(_lensId) == _msgSender(), "not owner");
-        require(!registeredAddress[_msgSender()], "already registered");
-        require(!registeredLens[_lensId], "already lens registered");
+        require(lensHub.ownerOf(_lensId) == msg.sender, "not owner");
+        require(!registeredAddress[msg.sender], "already registered");
+        require(!registeredLens[_lensId], "lens handle already registered");
         require(totalRegistered < MAX_REGISTERED, "max registered");
-        require(bridge.multiPassCheck(_msgSender(), _chainId));
-        registeredAddress[_msgSender()] = true;
+        require(bridge.multiPassCheck(msg.sender, _chainId));
+        registeredAddress[msg.sender] = true;
         registeredLens[_lensId] = true;
         totalRegistered++;
-        registeredToData[totalRegistered] = _data;
+        registeredToString[totalRegistered] = _data;
     }
 
     function registerWithWorldcoin(
@@ -69,12 +69,15 @@ contract MultichainNftVerifier is ERC721, Ownable {
         uint256 nullifierHash,
         uint256[8] calldata proof,
         uint16 _chainId,
-        bytes calldata _data
+        string calldata _data
     ) external {
-        require(!registeredAddress[_msgSender()], "already registered");
-        require(!registeredWorldcoin[nullifierHash], "already registered");
+        require(!registeredAddress[msg.sender], "already registered");
+        require(
+            !registeredWorldcoin[nullifierHash],
+            "worldid already registered"
+        );
         require(totalRegistered < MAX_REGISTERED, "max registered");
-        require(bridge.multiPassCheck(_msgSender(), _chainId));
+        require(bridge.multiPassCheck(msg.sender, _chainId));
         worldId.verifyProof(
             root,
             1,
@@ -83,19 +86,23 @@ contract MultichainNftVerifier is ERC721, Ownable {
             externalNullifier,
             proof
         );
-        registeredAddress[_msgSender()] = true;
+
+        registeredAddress[msg.sender] = true;
         registeredWorldcoin[nullifierHash] = true;
         totalRegistered++;
-        registeredToData[totalRegistered] = _data;
+        registeredToString[totalRegistered] = _data;
     }
 
-    function registerWithoutId(uint16 _chainId, bytes calldata _data) external {
-        require(!registeredAddress[_msgSender()], "already registered");
-        require(bridge.multiPassCheck(_msgSender(), _chainId));
-        registeredAddress[_msgSender()] = true;
+    function registerWithoutId(
+        uint16 _chainId,
+        string calldata _data
+    ) external {
+        require(!registeredAddress[msg.sender], "already registered");
+        require(bridge.multiPassCheck(msg.sender, _chainId));
+        registeredAddress[msg.sender] = true;
+        totalRegistered++;
+        registeredToString[totalRegistered] = _data;
     }
-
-    function finalizeRegister() external {}
 
     function _baseURI() internal view virtual override returns (string memory) {
         return uri;
